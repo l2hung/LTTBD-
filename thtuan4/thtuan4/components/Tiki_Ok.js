@@ -162,8 +162,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ccc',
     padding: 10,
-    backgroundColor: '#ffeb3b', // Yellow background like in the image
-  },
+    backgroundColor: '#ffeb3b', 
   applyButton: {
     backgroundColor: 'blue',
     padding: 10,
@@ -174,15 +173,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   section2: {
-  flexDirection: 'row', // Căn các phần tử theo chiều ngang
+  flexDirection: 'row', 
   backgroundColor: 'white',
   padding: 10,
   marginBottom: 10,
-  justifyContent: 'space-between', // Tạo khoảng cách giữa văn bản và liên kết
-  alignItems: 'center', // Căn giữa các phần tử theo chiều dọc
+  justifyContent: 'space-between', 
+  alignItems: 'center', 
 },
   voucherText: {
-    fontSize: 12, // Điều chỉnh kích thước văn bản theo nhu cầu
+    fontSize: 12, 
   },
   linkText: {
     color: 'blue',
@@ -211,7 +210,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   orderButton: {
-    backgroundColor: '#E53935', // Red background
+    backgroundColor: '#E53935', 
     padding: 15,
     borderRadius: 5,
     alignItems: 'center',
