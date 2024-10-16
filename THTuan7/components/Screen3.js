@@ -1,33 +1,39 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+
+const API_URL = 'https://67100630a85f4164ef2cd231.mockapi.io/todo'; // URL của API
 
 const Screen3 = ({ navigation, route }) => {
-  const { userName, setTasks } = route.params || { userName: 'User' }; 
+  const { userName, setTasks, fetchTasks } = route.params || { userName: 'User' };
   const [job, setJob] = useState('');
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     if (job.trim() === '') {
-      Alert.alert('Error', 'Please enter a job description.'); 
+      Alert.alert('Error', 'Please enter a job description.');
       return;
     }
-    
-    // Tạo ID mới cho công việc
-    const newTask = {
-      id: (Math.random() * 1000).toString(), // Tạo ID ngẫu nhiên cho công việc mới
-      title: job,
-    };
 
-    // Gọi setTasks để thêm công việc mới vào danh sách
-    setTasks(prevTasks => [...prevTasks, newTask]);
-    
-    console.log('Job added:', job);
-    navigation.goBack(); 
+    try {
+      // Thêm công việc mới vào API
+      const response = await axios.post(API_URL, { title: job });
+      // Cập nhật danh sách công việc
+      setTasks(prevTasks => [...prevTasks, response.data]);
+
+      // Fetch lại danh sách công việc mới
+      await fetchTasks();
+
+      // Quay lại màn hình trước (Screen2)
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error adding job:', error);
+    }
   };
 
   return (
     <View style={styles.container}>
-      {/* Header chứa nút quay lại và thông điệp */}
+      {/* Header */}
       <View style={styles.headerContainer}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back-outline" size={24} color="#000" />
@@ -35,7 +41,7 @@ const Screen3 = ({ navigation, route }) => {
         
         <View style={styles.textContainer}>
           <Text style={styles.welcomeText}>Hi {userName}</Text>
-          <Text style={styles.subtitle}>Have a great day ahead</Text>
+          <Text style={styles.subtitle}>Add a new task</Text>
         </View>
       </View>
 
@@ -55,16 +61,9 @@ const Screen3 = ({ navigation, route }) => {
         </View>
 
         {/* Nút "Finish" */}
-        <TouchableOpacity style={styles.button} onPress={handleFinish}>
-          <Text style={styles.buttonText}>FINISH</Text>
-          <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
+        <TouchableOpacity style={styles.finishButton} onPress={handleFinish}>
+          <Text style={styles.finishButtonText}>Finish</Text>
         </TouchableOpacity>
-
-        {/* Hình ảnh */}
-        <Image
-          source={require('../assets/Book.png')}
-          style={styles.image}
-        />
       </View>
     </View>
   );
@@ -74,18 +73,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'flex-start',
-    alignItems: 'flex-start', 
+    alignItems: 'flex-start',
     padding: 20,
     backgroundColor: '#fff',
   },
-  backButton: {
-    marginRight: 10, 
-  },
   headerContainer: {
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginTop: 15, 
-    marginBottom: 15, 
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 15,
+    marginBottom: 15,
+  },
+  backButton: {
+    marginRight: 10,
   },
   welcomeText: {
     fontSize: 22,
@@ -97,14 +96,13 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    width: '100%', 
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
   },
   title: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 20,
   },
   inputContainer: {
@@ -116,7 +114,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     marginBottom: 20,
-    width: '100%', 
+    width: '100%',
   },
   icon: {
     marginRight: 10,
@@ -124,24 +122,17 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
+    marginVertical: 10,
   },
-  button: {
-    flexDirection: 'row',
+  finishButton: {
     backgroundColor: '#00CED1',
-    padding: 15,
-    borderRadius: 15,
-    alignItems: 'center',
-    marginBottom: 20,
+    paddingHorizontal: 40,
+    paddingVertical: 10,
+    borderRadius: 5,
   },
-  buttonText: {
+  finishButtonText: {
     color: '#fff',
-    fontSize: 18,
-    marginRight: 10,
-  },
-  image: {
-    width: 150,
-    height: 150,
-    alignSelf: 'center', 
+    fontSize: 16,
   },
 });
 
