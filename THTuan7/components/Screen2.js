@@ -1,32 +1,67 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, FlatList } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, FlatList, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
+
+const API_URL = 'https://67100630a85f4164ef2cd231.mockapi.io/todo'; // Cập nhật URL API
 
 const Screen2 = ({ route, navigation }) => {
   const { userName } = route.params || { userName: 'User' };
 
-  const [tasks, setTasks] = useState([
-    { id: '1', title: 'To check email' },
-    { id: '2', title: 'UI task web page' },
-    { id: '3', title: 'Learn JavaScript basics' },
-    { id: '4', title: 'Learn HTML Advanced' },
-    { id: '5', title: 'Medical App UI' },
-    { id: '6', title: 'Learn Java' },
-  ]);
-
+  const [tasks, setTasks] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleDelete = (id) => {
-    setTasks(tasks.filter(task => task.id !== id));
+  // Fetch tasks from API
+  const fetchTasks = async () => {
+    try {
+      const response = await axios.get(API_URL);
+      setTasks(response.data);
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    }
   };
 
+  // Delete task
+  const handleDelete = (id) => {
+    axios
+      .delete(`${API_URL}/${id}`)
+      .then(() => {
+        setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id));
+      })
+      .catch((error) => {
+        console.error('Error deleting task:', error);
+      });
+  };
+
+  // Update task
+  const handleUpdateTask = (id, newTitle) => {
+    axios
+      .put(`${API_URL}/${id}`, {
+        title: newTitle,
+      })
+      .then((response) => {
+        setTasks((prevTasks) =>
+          prevTasks.map((task) => (task.id === id ? response.data : task))
+        );
+      })
+      .catch((error) => {
+        console.error('Error updating task:', error);
+      });
+  };
+
+  // Render task item
   const renderItem = ({ item }) => (
     <View style={styles.taskItem}>
       <Ionicons name="checkmark-circle-outline" size={20} color="green" />
       <Text style={styles.taskText}>{item.title}</Text>
-      <TouchableOpacity onPress={() => handleDelete(item.id)}>
-        <Ionicons name="trash-outline" size={20} color="red" />
-      </TouchableOpacity>
+      <View style={styles.actionButtons}>
+        <TouchableOpacity onPress={() => handleDelete(item.id)} accessibilityLabel="Delete task">
+          <Ionicons name="trash-outline" size={20} color="red" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleUpdateTask(item.id, "New Title")} accessibilityLabel="Update task">
+          
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
@@ -35,15 +70,12 @@ const Screen2 = ({ route, navigation }) => {
   );
 
   useEffect(() => {
-    const unsubscribe = navigation.addListener('focus', () => {
-      setTasks(prevTasks => [...prevTasks]);
-    });
-
-    return unsubscribe;
-  }, [navigation]);
+    fetchTasks();
+  }, []);
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.headerContainer}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back-outline" size={24} color="#000" />
@@ -55,7 +87,7 @@ const Screen2 = ({ route, navigation }) => {
         </View>
       </View>
 
-      {/* Ô tìm kiếm */}
+      {/* Search input */}
       <View style={styles.searchContainer}>
         <Ionicons name="search-outline" size={20} color="#666" style={styles.icon} />
         <TextInput 
@@ -66,25 +98,27 @@ const Screen2 = ({ route, navigation }) => {
         />
       </View>
 
-      {/* Danh sách công việc */}
+      {/* Task list */}
       {filteredTasks.length > 0 ? (
         <FlatList
           data={filteredTasks}
           renderItem={renderItem}
-          keyExtractor={item => item.id}
+          keyExtractor={item => item.id.toString()}
           style={styles.taskList}
         />
       ) : (
         <Text style={styles.noTasksText}>No tasks available</Text>
       )}
 
-      {/* Nút thêm công việc */}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => navigation.navigate('Screen3', { userName, setTasks })} 
-      >
-        <Ionicons name="add-outline" size={30} color="#fff" />
-      </TouchableOpacity>
+      {/* Add task button */}
+      <View style={styles.addTaskContainer}>
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('Screen3', { userName, setTasks, fetchTasks })}
+          style={styles.addButton}
+        >
+          <Ionicons name="add-outline" size={30} color="#fff" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
@@ -93,18 +127,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'flex-start',
-    alignItems: 'flex-start', 
+    alignItems: 'flex-start',
     padding: 20,
     backgroundColor: '#fff',
   },
   backButton: {
-    marginRight: 10, 
+    marginRight: 10,
   },
   headerContainer: {
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginTop: 15, 
-    marginBottom: 15, 
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 15,
+    marginBottom: 15,
   },
   welcomeText: {
     fontSize: 22,
@@ -131,6 +165,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
+    marginVertical: 10,
   },
   taskList: {
     width: '100%',
@@ -149,6 +184,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     flex: 1,
   },
+  actionButtons: {
+    flexDirection: 'row',
+  },
+  addTaskContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+  },
   addButton: {
     backgroundColor: '#00CED1',
     width: 60,
@@ -156,9 +199,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'absolute',
-    bottom: 30,
-    right: 30,
+    marginLeft: 10,
   },
   noTasksText: {
     fontSize: 16,
