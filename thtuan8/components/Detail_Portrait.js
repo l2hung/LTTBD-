@@ -9,7 +9,7 @@ export default function Detail_Portrait({ route }) {
       <Image source={{ uri: item.image }} style={styles.image} />
       <Text style={styles.title}>{item.name}</Text>
 
-      {/* Dòng mô tả và giá nằm cùng một hàng */}
+     
       <View style={styles.infoContainer}>
         <Text style={styles.description}>Spicy tasty donut family</Text>
         <Text style={styles.price}>${item.price.toFixed(2)}</Text>
