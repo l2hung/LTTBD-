@@ -1,33 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-
-// Client ID và Client Secret của bạn từ Spotify Developer Dashboard
-const CLIENT_ID = 'b49c2c5cc7104653a0e227d3fe01acdd';
-const CLIENT_SECRET = 'f7459ec66cce4abeb36280c3b27dcf77';
-
-// Hàm lấy Access Token từ Spotify
-const getAccessToken = async () => {
-  try {
-    const response = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: 'Basic ' + btoa(CLIENT_ID + ':' + CLIENT_SECRET),
-      },
-      body: 'grant_type=client_credentials',
-    });
-    const data = await response.json();
-    if (data.error) {
-      console.error('Lỗi khi lấy token:', data.error);
-      return null;
-    }
-    return data.access_token;
-  } catch (error) {
-    console.error('Lỗi khi lấy token:', error);
-    return null;
-  }
-};
+import axios from 'axios'; // Import axios
 
 // Thành phần HomeScreen chính
 const HomeScreen = () => {
@@ -35,9 +9,8 @@ const HomeScreen = () => {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Header />
-        <NewAlbum />
-        <NewTracks />  {/* Thêm phần New Tracks ở đây */}
-        <MadeForYou />
+        <Album />
+        <Tracks />
       </ScrollView>
       <BottomNavigation />
     </View>
@@ -63,25 +36,16 @@ const Header = () => (
 );
 
 // Thành phần New Album Releases
-const NewAlbum = () => {
+const Album = () => {
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
 
   useEffect(() => {
     const fetchData = async () => {
-      const token = await getAccessToken();
-      if (!token) return;
-
       try {
-        // Lấy danh sách album nổi bật từ Spotify API
-        const response = await fetch('https://api.spotify.com/v1/browse/new-releases', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-        setAlbums(data.albums.items || []);
+        const response = await axios.get('https://6730d0037aaf2a9aff0efc9d.mockapi.io/Album');
+        setAlbums(response.data || []);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching albums:', error);
@@ -117,11 +81,11 @@ const NewAlbum = () => {
               style={styles.albumContainer}
             >
               <Image
-                source={{ uri: album.images[0].url }}
+                source={{ uri: album.image }}  
                 style={styles.albumArt}
               />
               <Text style={styles.albumText}>{album.name}</Text>
-              <Text style={styles.artistText}>{album.artists.map(artist => artist.name).join(', ')}</Text>
+              <Text style={styles.artistText}>{album.artist}</Text>
             </TouchableOpacity>
           ))
         ) : (
@@ -132,31 +96,20 @@ const NewAlbum = () => {
   );
 };
 
-// Thành phần New Track Releases
-const NewTracks = () => {
-  const [tracks, setTracks] = useState([]);
+// Thành phần New Track Releases (lấy track từ album)
+const Tracks = () => {
+  const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
 
   useEffect(() => {
     const fetchData = async () => {
-      const token = await getAccessToken();
-      if (!token) return;
-
       try {
-        // Lấy danh sách các track mới từ playlist nổi bật
-        const response = await fetch('https://api.spotify.com/v1/browse/featured-playlists', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-        // Lấy các track từ playlist (có thể thêm logic lọc các track mới nhất ở đây)
-        const tracksFromPlaylists = data.playlists.items.map((playlist) => playlist.tracks.items).flat();
-        setTracks(tracksFromPlaylists);
+        const response = await axios.get('https://6730d0037aaf2a9aff0efc9d.mockapi.io/Album');
+        setAlbums(response.data || []);
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching tracks:', error);
+        console.error('Error fetching albums:', error);
         setLoading(false);
       }
     };
@@ -164,14 +117,14 @@ const NewTracks = () => {
     fetchData();
   }, []);
 
-  const handleTrackPress = (trackId) => {
-    navigation.navigate('Track', { trackId });
+  const handleTrackPress = (track) => {
+    navigation.navigate('Track', { track }); // Truyền toàn bộ đối tượng track
   };
 
   if (loading) {
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>New Track Releases</Text>
+        <Text style={styles.sectionTitle}>Track</Text>
         <Text style={styles.albumText}>Loading...</Text>
       </View>
     );
@@ -179,76 +132,30 @@ const NewTracks = () => {
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>New Tracks</Text>
+      <Text style={styles.sectionTitle}>Tracks</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {tracks && tracks.length > 0 ? (
-          tracks.map((track, index) => {
-            // Kiểm tra nếu track và track.track tồn tại
-            if (track && track.track) {
-              return (
+        {albums && albums.length > 0 ? (
+          albums.map((album, index) => {
+            return album.tracks && album.tracks.length > 0 ? (
+              album.tracks.map((track, trackIndex) => (
                 <TouchableOpacity
-                  key={index}
-                  onPress={() => handleTrackPress(track.track.id)}
+                  key={trackIndex}
+                  onPress={() => handleTrackPress(track)} // Truyền toàn bộ đối tượng track
                   style={styles.albumContainer}
                 >
                   <Image
-                    source={{ uri: track.track.album.images[0].url }}
+                    source={{ uri: track.image }}  
                     style={styles.albumArt}
                   />
-                  <Text style={styles.albumText}>{track.track.name}</Text>
-                  <Text style={styles.artistText}>
-                    {track.track.artists.map((artist) => artist.name).join(', ')}
-                  </Text>
+                  <Text style={styles.albumText}>{track.title}</Text>
+                  <Text style={styles.artistText}>{track.artist}</Text>
                 </TouchableOpacity>
-              );
-            }
-            return null; // Trả về null nếu không có track hợp lệ
+              ))
+            ) : null;
           })
         ) : (
           <Text style={styles.albumText}>No tracks found.</Text>
         )}
-      </ScrollView>
-    </View>
-  );
-};
-
-
-// Thành phần MadeForYou
-const MadeForYou = () => {
-  const [playlists, setPlaylists] = useState([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      const token = await getAccessToken();
-      if (!token) return;
-
-      try {
-        const response = await fetch('https://api.spotify.com/v1/browse/featured-playlists', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-        setPlaylists(data.playlists.items);
-      } catch (error) {
-        console.error('Error fetching playlists:', error);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Made For You</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {playlists.map((playlist, index) => (
-          <View key={index} style={styles.albumContainer}>
-            <Image source={{ uri: playlist.images[0].url }} style={styles.albumArt} />
-            <Text style={styles.albumText}>{playlist.name}</Text>
-            <Text style={styles.artistText}>{playlist.owner.display_name}</Text>
-          </View>
-        ))}
       </ScrollView>
     </View>
   );
@@ -365,11 +272,11 @@ const styles = StyleSheet.create({
   navIcon: {
     width: 24,
     height: 24,
+    marginBottom: 5,
   },
   navLabel: {
-    color: 'white',
-    fontSize: 12,
-    marginTop: 4,
+    color: '#fff',
+    fontSize: 10,
   },
 });
 
