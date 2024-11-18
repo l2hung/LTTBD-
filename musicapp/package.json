@@ -6,23 +6,29 @@
     "ios": "expo start --ios",
     "web": "expo start --web"
   },
-  "dependencies": {
-    "expo": "~51.0.28",
-    "expo-status-bar": "~1.12.1",
-    "react": "18.2.0",
-    "react-native": "0.74.5",
+"dependencies": {
     "axios": "*",
-    "@expo/vector-icons": "^14.0.3",
+    "expo-av": "~15.0.1",
+    "firebase": "^8.10.0",
+    "firebase/app": "*",
+    "firebase/auth": "*",
+    "expo-web-browser": "~14.0.1",
+    "firebase/storage": "*",
+    "@expo/vector-icons": "^14.0.2",
+    "firebase/firestore": "*",
     "react-native-paper": "4.9.2",
-    "expo-linear-gradient": "~13.0.2",
-    "react-native-screens": "3.31.1",
+    "expo-linear-gradient": "~14.0.1",
+    "react-native-screens": "~4.0.0",
+    "react-native-webview": "13.12.2",
     "@react-navigation/stack": "*",
     "@react-navigation/native": "*",
-    "react-native-gesture-handler": "~2.16.1",
-    "react-native-safe-area-context": "4.10.5",
+    "react-native-spotify-sdk": "*",
+    "react-native-spotify-remote": "*",
+    "react-native-gesture-handler": "~2.20.2",
+    "react-native-safe-area-context": "4.12.0",
     "@react-native-community/checkbox": "*",
     "@react-native-async-storage/async-storage": "1.23.1"
-  },
+  }
   "devDependencies": {
     "@babel/core": "^7.20.0"
   },
