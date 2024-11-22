@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } fro
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Checkbox } from 'react-native-paper'; // Sử dụng Checkbox từ react-native-paper
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Thêm AsyncStorage
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -23,8 +24,13 @@ export default function LoginScreen() {
       if (response.ok) {
         const user = users.find(user => user.email === email && user.password === password);
         if (user) {
+          // Lưu thông tin người dùng vào AsyncStorage
+          await AsyncStorage.setItem('userId', user.id);  // Lưu userId
+          await AsyncStorage.setItem('userName', user.username || 'User');
+          await AsyncStorage.setItem('userEmail', user.email); // Lưu email nếu cần
+
           Alert.alert('Login Successful', `Welcome back, ${user.username || 'User'}!`);
-          navigation.navigate('Home'); 
+          navigation.navigate('Home');  // Điều hướng đến màn hình Home
         } else {
           Alert.alert('Login Failed', 'Invalid email or password');
         }
