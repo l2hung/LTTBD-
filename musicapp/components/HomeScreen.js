@@ -1,41 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import axios from 'axios'; // Import axios
 
-// Thành phần HomeScreen chính
+// Main HomeScreen component
 const HomeScreen = () => {
   return (
-    <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Header />
-        <Album />
-        <Tracks />
-      </ScrollView>
-      <BottomNavigation />
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <Album />
+          <Tracks />
+        </ScrollView>
+        <BottomNavigation />
+      </View>
+    </SafeAreaView>
   );
 };
 
-// Thành phần Header
-const Header = () => (
-  <View style={styles.header}>
-    <Text style={styles.greetingText}>Good Evening,</Text>
-    <View style={styles.searchContainer}>
-      <Image
-        source={require('../assets/image11.png')}
-        style={styles.searchIcon}
-      />
-      <TextInput
-        style={styles.searchInput}
-        placeholder="What do you want to play ?"
-        placeholderTextColor="#ffffff"
-      />
-    </View>
-  </View>
-);
-
-// Thành phần New Album Releases
+// New Album Releases component
 const Album = () => {
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +46,7 @@ const Album = () => {
   if (loading) {
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>New Album Releases</Text>
+        <Text style={styles.sectionTitle}>Albums</Text>
         <Text style={styles.albumText}>Loading...</Text>
       </View>
     );
@@ -71,7 +54,7 @@ const Album = () => {
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>New Albums</Text>
+      <Text style={styles.sectionTitle}>Albums</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {albums && albums.length > 0 ? (
           albums.map((album, index) => (
@@ -84,8 +67,7 @@ const Album = () => {
                 source={{ uri: album.image }}  
                 style={styles.albumArt}
               />
-              <Text style={styles.albumText}>{album.name}</Text>
-              <Text style={styles.artistText}>{album.artist}</Text>
+              <Text style={styles.albumText}>{album.title}</Text>
             </TouchableOpacity>
           ))
         ) : (
@@ -96,20 +78,20 @@ const Album = () => {
   );
 };
 
-// Thành phần New Track Releases (lấy track từ album)
+// Tracks component
 const Tracks = () => {
-  const [albums, setAlbums] = useState([]);
+  const [tracks, setTracks] = useState([]);
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get('https://6730d0037aaf2a9aff0efc9d.mockapi.io/Album');
-        setAlbums(response.data || []);
-        setLoading(false);
+        const response = await axios.get('https://6730d0037aaf2a9aff0efc9d.mockapi.io/tracks');
+        setTracks(response.data || []);
       } catch (error) {
-        console.error('Error fetching albums:', error);
+        console.error('Error fetching tracks:', error);
+      } finally {
         setLoading(false);
       }
     };
@@ -118,13 +100,13 @@ const Tracks = () => {
   }, []);
 
   const handleTrackPress = (track) => {
-    navigation.navigate('Track', { track }); // Truyền toàn bộ đối tượng track
+    navigation.navigate('Track', { track });
   };
 
   if (loading) {
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Track</Text>
+        <Text style={styles.sectionTitle}>Tracks</Text>
         <Text style={styles.albumText}>Loading...</Text>
       </View>
     );
@@ -134,25 +116,21 @@ const Tracks = () => {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Tracks</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {albums && albums.length > 0 ? (
-          albums.map((album, index) => {
-            return album.tracks && album.tracks.length > 0 ? (
-              album.tracks.map((track, trackIndex) => (
-                <TouchableOpacity
-                  key={trackIndex}
-                  onPress={() => handleTrackPress(track)} // Truyền toàn bộ đối tượng track
-                  style={styles.albumContainer}
-                >
-                  <Image
-                    source={{ uri: track.image }}  
-                    style={styles.albumArt}
-                  />
-                  <Text style={styles.albumText}>{track.title}</Text>
-                  <Text style={styles.artistText}>{track.artist}</Text>
-                </TouchableOpacity>
-              ))
-            ) : null;
-          })
+        {tracks && tracks.length > 0 ? (
+          tracks.map((track, index) => (
+            <TouchableOpacity
+              key={index}
+              onPress={() => handleTrackPress(track)}
+              style={styles.albumContainer}
+            >
+              <Image
+                source={{ uri: track.image }}  
+                style={styles.albumArt}
+              />
+              <Text style={styles.albumText}>{track.title}</Text>
+              <Text style={styles.artistText}>{track.artist}</Text>
+            </TouchableOpacity>
+          ))
         ) : (
           <Text style={styles.albumText}>No tracks found.</Text>
         )}
@@ -161,7 +139,7 @@ const Tracks = () => {
   );
 };
 
-// Thành phần BottomNavigation
+// BottomNavigation component
 const BottomNavigation = () => {
   const navigation = useNavigation();
 
@@ -189,8 +167,11 @@ const BottomNavigation = () => {
   );
 };
 
-// Styles cho các thành phần
+// Styles for components
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1, 
+  },
   container: {
     flex: 1,
     backgroundColor: '#6F2DBD',
@@ -198,33 +179,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingVertical: 16,
     paddingHorizontal: 16,
-  },
-  header: {
-    marginBottom: 20,
-  },
-  greetingText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#7b49e9',
-    borderRadius: 20,
-    paddingHorizontal: 15,
-    height: 40,
-  },
-  searchIcon: {
-    width: 24,
-    height: 24,
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#ffffff',
-    fontSize: 14,
   },
   section: {
     marginVertical: 15,
