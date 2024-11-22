@@ -1,10 +1,161 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Audio } from 'expo-av';
-import { useRoute, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
+import { useNavigation, useRoute } from '@react-navigation/native';
 
-// Thành phần BottomNavigation
+const TrackScreen = () => {
+  const route = useRoute();
+  const navigation = useNavigation();
+  const { track } = route.params;
+
+  const [sound, setSound] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackPosition, setPlaybackPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);  
+
+  // Check if track data is valid
+  useEffect(() => {
+    if (!track) {
+      console.error('Track data is missing!');
+      return;
+    }
+
+    const updatePlaybackStatus = async () => {
+      if (sound) {
+        sound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded) {
+            setPlaybackPosition(status.positionMillis / 1000);
+            setDuration(status.durationMillis / 1000);
+          }
+        });
+      }
+    };
+
+    updatePlaybackStatus();
+
+    return () => {
+      sound?.unloadAsync();
+    };
+  }, [sound, track]); // Update when track or sound changes
+
+  const handlePlayPause = async () => {
+    if (isPlaying) {
+      await sound.pauseAsync();
+    } else {
+      if (!sound) {
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          { uri: track.audioURL },
+          { shouldPlay: true }
+        );
+        setSound(newSound);
+      } else {
+        await sound.playAsync();
+      }
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const handleSeek = async (value) => {
+    if (sound) {
+      await sound.setPositionAsync(value * 1000);
+    }
+  };
+
+  const handleVolumeIncrease = async () => {
+    if (volume < 1) {
+      const newVolume = volume + 0.1;
+      setVolume(newVolume);
+      if (sound) {
+        await sound.setVolumeAsync(newVolume); // Tăng âm lượng
+      }
+    }
+  };
+
+  const handleVolumeDecrease = async () => {
+    if (volume > 0) {
+      const newVolume = volume - 0.1;
+      setVolume(newVolume);
+      if (sound) {
+        await sound.setVolumeAsync(newVolume); // Giảm âm lượng
+      }
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={24} color="white" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Now Playing</Text>
+        <View style={styles.placeholder} />
+      </View>
+
+      <View style={styles.content}>
+        <Image 
+          source={{ uri: track.image }} 
+          style={styles.artwork}
+        />
+        
+        <View style={styles.trackInfo}>
+          <Text style={styles.trackName}>{track.title}</Text>
+          <Text style={styles.artistName}>{track.artist}</Text>
+        </View>
+
+        <View style={styles.progressContainer}>
+          <Slider
+            style={{ width: '100%', height: 40 }}
+            minimumValue={0}
+            maximumValue={duration}
+            value={playbackPosition}
+            minimumTrackTintColor="#FFFFFF"
+            maximumTrackTintColor="#000000"
+            thumbTintColor="#FFFFFF"
+            onSlidingComplete={handleSeek}
+          />
+          <View style={styles.timeContainer}>
+            <Text style={styles.timeText}>{formatTime(playbackPosition)}</Text>
+            <Text style={styles.timeText}>{formatTime(duration)}</Text>
+          </View>
+        </View>
+
+        <View style={styles.controls}>
+          {/* Nút giảm âm lượng */}
+          <TouchableOpacity onPress={handleVolumeDecrease}>
+            <Ionicons name="remove-circle" size={32} color="white" />
+          </TouchableOpacity>
+          
+          {/* Nút phát/pause */}
+          <TouchableOpacity onPress={handlePlayPause} style={styles.playButton}>
+            <Ionicons 
+              name={isPlaying ? "pause-circle" : "play-circle"} 
+              size={64} 
+              color="white" 
+            />
+          </TouchableOpacity>
+          
+          {/* Nút tăng âm lượng */}
+          <TouchableOpacity onPress={handleVolumeIncrease}>
+            <Ionicons name="add-circle" size={32} color="white" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Bottom Navigation Component */}
+      <BottomNavigation />
+    </SafeAreaView>
+  );
+};
+
 const BottomNavigation = () => {
   const navigation = useNavigation();
 
@@ -32,201 +183,81 @@ const BottomNavigation = () => {
   );
 };
 
-// Màn hình TrackScreen
-const TrackScreen = () => {
-  const route = useRoute();
-  const navigation = useNavigation();
-  const { track } = route.params; // Nhận dữ liệu từ màn hình trước
-
-  const [sound, setSound] = useState();
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackPosition, setPlaybackPosition] = useState(0);
-  const [volume, setVolume] = useState(1); // Mặc định âm lượng tối đa là 1
-
-  useEffect(() => {
-    return sound
-      ? () => {
-          sound.unloadAsync(); // Giải phóng tài nguyên khi màn hình bị đóng
-        }
-      : undefined;
-  }, [sound]);
-
-  const handlePlayPause = async () => {
-    if (isPlaying) {
-      await sound.pauseAsync();
-    } else {
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: track.audioURL },
-        { shouldPlay: true }
-      );
-      setSound(sound);
-    }
-    setIsPlaying(!isPlaying);
-  };
-
-  const adjustVolume = async (increase) => {
-    let newVolume = volume + (increase ? 0.1 : -0.1);
-    newVolume = Math.max(0, Math.min(1, newVolume)); // Giới hạn âm lượng trong khoảng [0, 1]
-    setVolume(newVolume);
-    if (sound) {
-      await sound.setVolumeAsync(newVolume);
-    }
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* Header với nút Back */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Now Playing</Text>
-      </View>
-
-      {/* Thông tin bài hát */}
-      <View style={styles.trackContainer}>
-        <Image source={{ uri: track.image }} style={styles.trackArt} />
-        <Text style={styles.trackTitle}>{track.title}</Text>
-        <Text style={styles.trackArtist}>{track.artist}</Text>
-
-        {/* Thanh điều khiển phát nhạc */}
-        <View style={styles.controls}>
-          <TouchableOpacity onPress={() => setPlaybackPosition(playbackPosition - 10)}>
-            <Ionicons name="play-skip-back" size={36} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handlePlayPause} style={styles.playButton}>
-            <Ionicons name={isPlaying ? 'pause-circle' : 'play-circle'} size={64} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setPlaybackPosition(playbackPosition + 10)}>
-            <Ionicons name="play-skip-forward" size={36} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Thanh thời gian */}
-        <View style={styles.progressContainer}>
-          <Text style={styles.progressText}>{playbackPosition}s</Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progress, { width: `${(playbackPosition / 180) * 100}%` }]} />
-          </View>
-          <Text style={styles.progressText}>3:00</Text>
-        </View>
-
-        {/* Điều chỉnh âm lượng */}
-        <View style={styles.volumeControls}>
-          <TouchableOpacity onPress={() => adjustVolume(false)} style={styles.volumeButton}>
-            <Text style={styles.volumeText}>-</Text>
-          </TouchableOpacity>
-          <Text style={styles.volumeText}>{Math.round(volume * 100)}%</Text>
-          <TouchableOpacity onPress={() => adjustVolume(true)} style={styles.volumeButton}>
-            <Text style={styles.volumeText}>+</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Navigation ở dưới */}
-      <BottomNavigation />
-    </SafeAreaView>
-  );
-};
-
-// Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#6F2DBD',
+    backgroundColor: '#8A2BE2',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: '#7b49e9',
-  },
-  backButton: {
-    marginRight: 10,
   },
   headerTitle: {
-    color: '#fff',
+    color: 'white',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
-  trackContainer: {
+  placeholder: {
+    width: 24,
+  },
+  content: {
     flex: 1,
     alignItems: 'center',
-    padding: 16,
+    paddingHorizontal: 24,
   },
-  trackArt: {
-    width: 200,
-    height: 200,
-    borderRadius: 10,
-    marginBottom: 20,
+  artwork: {
+    width: 280,
+    height: 280,
+    borderRadius: 20,
+    marginTop: 40,
   },
-  trackTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
+  trackInfo: {
+    alignItems: 'center',
+    marginTop: 32,
+  },
+  trackName: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: '600',
     textAlign: 'center',
   },
-  trackArtist: {
-    color: '#fff',
-    fontSize: 16,
+  artistName: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 18,
+    marginTop: 8,
     textAlign: 'center',
-    marginBottom: 20,
+  },
+  progressContainer: {
+    width: '100%',
+    marginTop: 40,
+  },
+  timeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  timeText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 14,
   },
   controls: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
+    marginTop: 40,
     width: '100%',
-    marginVertical: 20,
   },
   playButton: {
-    marginHorizontal: 20,
-  },
-  progressContainer: {
-    width: '100%',
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  progressBar: {
-    width: '90%',
-    height: 5,
-    backgroundColor: '#ccc',
-    borderRadius: 5,
-    overflow: 'hidden',
-    marginVertical: 10,
-  },
-  progress: {
-    height: '100%',
-    backgroundColor: '#fff',
-  },
-  progressText: {
-    color: '#fff',
-    fontSize: 12,
-  },
-  volumeControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '60%',
-    marginTop: 20,
-  },
-  volumeButton: {
-    padding: 10,
-    backgroundColor: '#6F2DBD',
-    borderRadius: 5,
-  },
-  volumeText: {
-    color: '#fff',
-    fontSize: 20,
+    marginHorizontal: 40,
   },
   bottomNav: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    backgroundColor: '#3B065E',
-    paddingVertical: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#6A1B9A',
   },
   navItem: {
     alignItems: 'center',
@@ -234,11 +265,11 @@ const styles = StyleSheet.create({
   navIcon: {
     width: 24,
     height: 24,
-    marginBottom: 5,
   },
   navLabel: {
-    color: '#fff',
-    fontSize: 10,
+    color: 'white',
+    fontSize: 12,
+    marginTop: 4,
   },
 });
 
