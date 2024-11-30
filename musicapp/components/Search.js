@@ -13,6 +13,7 @@ import {
 import axios from 'axios';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../ThemeContext'; // Adjust path if necessary
 
 const SearchScreen = () => {
   const [tracks, setTracks] = useState([]);
@@ -178,7 +179,7 @@ const BottomNavigation = () => {
     { label: 'Library', icon: require('../assets/image10.png'), screen: 'Library' },
     { label: 'Home', icon: require('../assets/image9.png'), screen: 'Home' },
     { label: 'User', icon: require('../assets/image14.png'), screen: 'User' },
-    { label: 'Setting', icon: require('../assets/image13.png'), screen: 'Setting' },
+    { label: 'Settings', icon: require('../assets/image13.png'), screen: 'Settings' },
   ];
 
   return (
