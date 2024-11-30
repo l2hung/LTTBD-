@@ -3,7 +3,7 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, SafeAreaView } from 'r
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 
 const TrackScreen = () => {
   const route = useRoute();
@@ -14,9 +14,8 @@ const TrackScreen = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackPosition, setPlaybackPosition] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(1);  
+  const [volume, setVolume] = useState(1);
 
-  // Check if track data is valid
   useEffect(() => {
     if (!track) {
       console.error('Track data is missing!');
@@ -39,7 +38,20 @@ const TrackScreen = () => {
     return () => {
       sound?.unloadAsync();
     };
-  }, [sound, track]); // Update when track or sound changes
+  }, [sound, track]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      // Khi màn hình được focus
+      return () => {
+        // Khi màn hình mất focus
+        if (sound) {
+          sound.pauseAsync();
+          setIsPlaying(false);
+        }
+      };
+    }, [sound])
+  );
 
   const handlePlayPause = async () => {
     if (isPlaying) {
@@ -71,29 +83,33 @@ const TrackScreen = () => {
   };
 
   const handleVolumeIncrease = async () => {
-    if (volume < 1) {
-      const newVolume = volume + 0.1;
-      setVolume(newVolume);
-      if (sound) {
-        await sound.setVolumeAsync(newVolume); // Tăng âm lượng
-      }
+    const newVolume = Math.min(volume + 0.1, 1);
+    setVolume(newVolume);
+    if (sound) {
+      await sound.setVolumeAsync(newVolume);
     }
   };
 
   const handleVolumeDecrease = async () => {
-    if (volume > 0) {
-      const newVolume = volume - 0.1;
-      setVolume(newVolume);
-      if (sound) {
-        await sound.setVolumeAsync(newVolume); // Giảm âm lượng
-      }
+    const newVolume = Math.max(volume - 0.1, 0);
+    setVolume(newVolume);
+    if (sound) {
+      await sound.setVolumeAsync(newVolume);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          onPress={() => {
+            if (sound) {
+              sound.pauseAsync();
+              setIsPlaying(false);
+            }
+            navigation.goBack();
+          }}
+        >
           <Ionicons name="chevron-back" size={24} color="white" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Now Playing</Text>
@@ -101,11 +117,8 @@ const TrackScreen = () => {
       </View>
 
       <View style={styles.content}>
-        <Image 
-          source={{ uri: track.image }} 
-          style={styles.artwork}
-        />
-        
+        <Image source={{ uri: track.image }} style={styles.artwork} />
+
         <View style={styles.trackInfo}>
           <Text style={styles.trackName}>{track.title}</Text>
           <Text style={styles.artistName}>{track.artist}</Text>
@@ -120,6 +133,7 @@ const TrackScreen = () => {
             minimumTrackTintColor="#FFFFFF"
             maximumTrackTintColor="#000000"
             thumbTintColor="#FFFFFF"
+            onSlidingStart={() => sound?.pauseAsync()}
             onSlidingComplete={handleSeek}
           />
           <View style={styles.timeContainer}>
@@ -129,34 +143,30 @@ const TrackScreen = () => {
         </View>
 
         <View style={styles.controls}>
-          {/* Nút giảm âm lượng */}
           <TouchableOpacity onPress={handleVolumeDecrease}>
             <Ionicons name="remove-circle" size={32} color="white" />
           </TouchableOpacity>
-          
-          {/* Nút phát/pause */}
+
           <TouchableOpacity onPress={handlePlayPause} style={styles.playButton}>
-            <Ionicons 
-              name={isPlaying ? "pause-circle" : "play-circle"} 
-              size={64} 
-              color="white" 
+            <Ionicons
+              name={isPlaying ? 'pause-circle' : 'play-circle'}
+              size={64}
+              color="white"
             />
           </TouchableOpacity>
-          
-          {/* Nút tăng âm lượng */}
+
           <TouchableOpacity onPress={handleVolumeIncrease}>
             <Ionicons name="add-circle" size={32} color="white" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Bottom Navigation Component */}
-      <BottomNavigation />
+      <BottomNavigation sound={sound} setIsPlaying={setIsPlaying} />
     </SafeAreaView>
   );
 };
 
-const BottomNavigation = () => {
+const BottomNavigation = ({ sound, setIsPlaying }) => {
   const navigation = useNavigation();
 
   const navItems = [
@@ -172,7 +182,13 @@ const BottomNavigation = () => {
       {navItems.map((item, index) => (
         <TouchableOpacity
           key={index}
-          onPress={() => navigation.navigate(item.screen)}
+          onPress={() => {
+            if (sound) {
+              sound.pauseAsync();
+              setIsPlaying(false);
+            }
+            navigation.navigate(item.screen);
+          }}
           style={styles.navItem}
         >
           <Image source={item.icon} style={styles.navIcon} />
@@ -252,12 +268,14 @@ const styles = StyleSheet.create({
   playButton: {
     marginHorizontal: 40,
   },
-  bottomNav: {
+   bottomNav: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#6A1B9A',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#3b065e',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
   },
   navItem: {
     alignItems: 'center',
@@ -265,11 +283,11 @@ const styles = StyleSheet.create({
   navIcon: {
     width: 24,
     height: 24,
+    marginBottom: 5,
   },
   navLabel: {
-    color: 'white',
-    fontSize: 12,
-    marginTop: 4,
+    color: '#fff',
+    fontSize: 10,
   },
 });
 
