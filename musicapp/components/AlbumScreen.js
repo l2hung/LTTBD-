@@ -5,18 +5,17 @@ import axios from 'axios';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Thành phần AlbumScreen
 const AlbumScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
-  const { albumId } = route.params; // Nhận albumId từ HomeScreen
+  const { albumId } = route.params;
   const [album, setAlbum] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null); // Thông tin người dùng đăng nhập
-  const [isFavorite, setIsFavorite] = useState(false); // Trạng thái yêu thích album
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAlbumFavorite, setIsAlbumFavorite] = useState(false);
+  const [trackFavorites, setTrackFavorites] = useState({});
 
   useEffect(() => {
-    // Fetch album và người dùng hiện tại
     const fetchAlbum = async () => {
       try {
         const response = await axios.get(`https://6730d0037aaf2a9aff0efc9d.mockapi.io/Album/${albumId}`);
@@ -30,11 +29,19 @@ const AlbumScreen = () => {
 
     const fetchCurrentUser = async () => {
       try {
-        // Lấy userId từ AsyncStorage
         const userId = await AsyncStorage.getItem('userId');
         if (userId) {
           const response = await axios.get(`https://67105e1fa85f4164ef2dbf46.mockapi.io/user/${userId}`);
           setCurrentUser(response.data);
+
+          const isFavorite = response.data.album.some(item => item.id === albumId);
+          setIsAlbumFavorite(isFavorite);
+
+          const trackStatus = {};
+          (response.data.song || []).forEach(song => {
+            trackStatus[song.id] = true;
+          });
+          setTrackFavorites(trackStatus);
         }
       } catch (error) {
         console.error('Error fetching user:', error);
@@ -46,33 +53,62 @@ const AlbumScreen = () => {
   }, [albumId]);
 
   const handleTrackPress = (track) => {
-    navigation.navigate('Track', { track }); // Điều hướng đến màn hình Track
+    navigation.navigate('Track', { track });
   };
 
   const handleAddAlbumToFavorites = async () => {
+    if (!currentUser || !album) return;
+
+    try {
+      const updatedFavorites = [...currentUser.album];
+      const isAlreadyFavorite = updatedFavorites.some(item => item.id === album.id);
+
+      if (isAlreadyFavorite) {
+        const newFavorites = updatedFavorites.filter(item => item.id !== album.id);
+        await updateUserData({ album: newFavorites });
+        setIsAlbumFavorite(false);
+      } else {
+        updatedFavorites.push(album);
+        await updateUserData({ album: updatedFavorites });
+        setIsAlbumFavorite(true);
+      }
+    } catch (error) {
+      console.error('Error updating favorites:', error);
+    }
+  };
+
+  const handleAddTrackToFavorites = async (track) => {
+    if (!currentUser || !track) return;
+
+    try {
+      const updatedTrackFavorites = { ...trackFavorites };
+      const isAlreadyFavorite = updatedTrackFavorites[track.id];
+
+      if (isAlreadyFavorite) {
+        const updatedSongs = (currentUser.song || []).filter(song => song.id !== track.id);
+        await updateUserData({ song: updatedSongs });
+        updatedTrackFavorites[track.id] = false;
+        setTrackFavorites(updatedTrackFavorites);
+      } else {
+        updatedTrackFavorites[track.id] = true;
+        setTrackFavorites(updatedTrackFavorites);
+        const updatedSongs = [...(currentUser.song || []), track];
+        await updateUserData({ song: updatedSongs });
+      }
+    } catch (error) {
+      console.error('Error adding track to favorites:', error);
+    }
+  };
+
+  const updateUserData = async (data) => {
     if (!currentUser) return;
 
     try {
-      let updatedFavorites = [...currentUser.album];
-
-      if (isFavorite) {
-        // Nếu album đã được yêu thích, hủy yêu thích (xóa khỏi danh sách yêu thích)
-        updatedFavorites = updatedFavorites.filter(item => item.id !== album.id);
-        setIsFavorite(false);
-        console.log(`Album "${album.title}" removed from favorites!`);
-      } else {
-        // Nếu album chưa được yêu thích, thêm vào danh sách yêu thích
-        updatedFavorites.push(album);
-        setIsFavorite(true);
-        console.log(`Album "${album.title}" added to favorites!`);
-      }
-
-      await axios.put(`https://67105e1fa85f4164ef2dbf46.mockapi.io/user/${currentUser.id}`, {
-        album: updatedFavorites,
-      });
-      setCurrentUser((prev) => ({ ...prev, album: updatedFavorites }));
+      const updatedUser = { ...currentUser, ...data };
+      await axios.put(`https://67105e1fa85f4164ef2dbf46.mockapi.io/user/${currentUser.id}`, updatedUser);
+      setCurrentUser(updatedUser);
     } catch (error) {
-      console.error('Error updating favorites:', error);
+      console.error('Error updating user data:', error);
     }
   };
 
@@ -95,61 +131,49 @@ const AlbumScreen = () => {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
-        {/* Header với nút Back */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-           {/* Nút thêm album vào danh sách yêu thích */}
-          <TouchableOpacity
-            onPress={handleAddAlbumToFavorites}
-            style={styles.favoriteButton}
-          >
+
+          <TouchableOpacity onPress={handleAddAlbumToFavorites} style={styles.favoriteButton}>
             <Ionicons
-              name={isFavorite ? "heart" : "heart-outline"}
+              name={isAlbumFavorite ? "heart" : "heart-outline"}
               size={30}
-              color={isFavorite ? "red" : "#fff"}
+              color={isAlbumFavorite ? "red" : "#fff"}
             />
           </TouchableOpacity>
         </View>
 
-        {/* Thông tin Album */}
         <View style={styles.headerContent}>
           <Image source={{ uri: album.image }} style={styles.albumArt} />
           <Text style={styles.albumTitle}>{album.title}</Text>
           <Text style={styles.albumArtist}>{album.artist}</Text>
         </View>
 
-        {/* Danh sách bài hát */}
         <View style={styles.trackList}>
           {album.tracks.map((track, index) => (
             <View key={index} style={styles.trackContainer}>
-              {/* Thông tin bài hát */}
-              <TouchableOpacity
-                onPress={() => handleTrackPress(track)}
-                style={styles.trackInfoContainer}
-              >
+              <TouchableOpacity onPress={() => handleTrackPress(track)} style={styles.trackInfoContainer}>
                 <Text style={styles.trackTitle}>{track.title}</Text>
                 <Text style={styles.trackArtist}>{track.artist}</Text>
               </TouchableOpacity>
-              {/* Nút thêm bài hát yêu thích */}
-              <TouchableOpacity
-                onPress={() => handleAddTrackToFavorites(track)}
-                style={styles.favoriteButton}
-              >
-                <Ionicons name="add" size={20} color="#fff" />
+              <TouchableOpacity onPress={() => handleAddTrackToFavorites(track)} style={styles.favoriteButton}>
+                <Ionicons
+                  name={trackFavorites[track.id] ? "heart" : "heart-outline"}
+                  size={30}
+                  color={trackFavorites[track.id] ? "red" : "#fff"}
+                />
               </TouchableOpacity>
             </View>
           ))}
         </View>
-        
       </ScrollView>
       <BottomNavigation />
     </View>
   );
 };
 
-// BottomNavigation component
 const BottomNavigation = () => {
   const navigation = useNavigation();
 
@@ -177,6 +201,7 @@ const BottomNavigation = () => {
   );
 };
 
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -187,12 +212,17 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
     paddingTop: 10,
   },
   backButton: {
     padding: 10,
+  },
+  favoriteButton: {
+    padding: 10,
+    backgroundColor: 'transparent',
   },
   headerContent: {
     alignItems: 'center',
@@ -235,16 +265,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
   },
- favoriteButton: {
-    position: 'absolute',
-    top: 20,
-    right: 20,
-    padding: 5,
-    backgroundColor: '#555',
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   loadingText: {
     color: '#FFFFFF',
     fontSize: 18,
@@ -264,7 +284,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#3b065e',
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    borderTopColor: '#ffffff20',
   },
   navItem: {
     alignItems: 'center',
@@ -272,11 +292,11 @@ const styles = StyleSheet.create({
   navIcon: {
     width: 24,
     height: 24,
-    marginBottom: 5,
   },
   navLabel: {
-    color: '#fff',
-    fontSize: 10,
+    color: '#FFFFFF',
+    fontSize: 12,
+    marginTop: 5,
   },
 });
 
