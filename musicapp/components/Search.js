@@ -179,7 +179,7 @@ const BottomNavigation = () => {
     { label: 'Library', icon: require('../assets/image10.png'), screen: 'Library' },
     { label: 'Home', icon: require('../assets/image9.png'), screen: 'Home' },
     { label: 'User', icon: require('../assets/image14.png'), screen: 'User' },
-    { label: 'Settings', icon: require('../assets/image13.png'), screen: 'Settings' },
+    { label: 'Setting', icon: require('../assets/image13.png'), screen: 'Setting' },
   ];
 
   return (
@@ -315,11 +315,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
   },
-  bottomNav: {
-     backgroundColor: '#3b065e',
-    paddingVertical: 10,
+   bottomNav: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    alignItems: 'center',
+    backgroundColor: '#3b065e',
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
   },
   navItem: {
     alignItems: 'center',
@@ -330,8 +333,8 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   navLabel: {
-    fontSize: 12,
-    color: '#6F2DBD',
+    color: '#fff',
+    fontSize: 10,
   },
 });
 
