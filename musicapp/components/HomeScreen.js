@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import axios from 'axios'; // Import axios
+import axios from 'axios';
+import { useTheme } from '../ThemeContext'; // Điều chỉnh đường dẫn
 
 // Main HomeScreen component
 const HomeScreen = () => {
@@ -18,6 +19,7 @@ const HomeScreen = () => {
   );
 };
 
+
 // New Album Releases component
 const Album = () => {
   const [albums, setAlbums] = useState([]);
@@ -31,7 +33,7 @@ const Album = () => {
         setAlbums(response.data || []);
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching albums:', error);
+        console.error('Lỗi khi lấy dữ liệu album:', error);
         setLoading(false);
       }
     };
@@ -46,15 +48,15 @@ const Album = () => {
   if (loading) {
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Albums</Text>
-        <Text style={styles.albumText}>Loading...</Text>
+        <Text style={styles.sectionTitle}>Album</Text>
+        <Text style={styles.albumText}>Đang tải...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Albums</Text>
+      <Text style={styles.sectionTitle}>Album thịnh hành </Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {albums && albums.length > 0 ? (
           albums.map((album, index) => (
@@ -71,7 +73,7 @@ const Album = () => {
             </TouchableOpacity>
           ))
         ) : (
-          <Text style={styles.albumText}>No albums found.</Text>
+          <Text style={styles.albumText}>Không có album nào.</Text>
         )}
       </ScrollView>
     </View>
@@ -84,13 +86,19 @@ const Tracks = () => {
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
 
+  // Hàm trộn ngẫu nhiên mảng bài hát
+  const shuffleArray = (array) => {
+    return array.sort(() => Math.random() - 0.5);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await axios.get('https://6730d0037aaf2a9aff0efc9d.mockapi.io/tracks');
-        setTracks(response.data || []);
+        let shuffledTracks = shuffleArray(response.data || []);
+        setTracks(shuffledTracks); // Lưu các bài hát đã trộn vào state
       } catch (error) {
-        console.error('Error fetching tracks:', error);
+        console.error('Lỗi khi lấy dữ liệu bài hát:', error);
       } finally {
         setLoading(false);
       }
@@ -106,18 +114,18 @@ const Tracks = () => {
   if (loading) {
     return (
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Tracks</Text>
-        <Text style={styles.albumText}>Loading...</Text>
+        <Text style={styles.sectionTitle}>Bài hát</Text>
+        <Text style={styles.albumText}>Đang tải...</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Tracks</Text>
+      <Text style={styles.sectionTitle}>Bài hát thịnh hành</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {tracks && tracks.length > 0 ? (
-          tracks.map((track, index) => (
+          tracks.slice(0, 10).map((track, index) => (  // Hiển thị 10 bài hát ngẫu nhiên
             <TouchableOpacity
               key={index}
               onPress={() => handleTrackPress(track)}
@@ -132,7 +140,7 @@ const Tracks = () => {
             </TouchableOpacity>
           ))
         ) : (
-          <Text style={styles.albumText}>No tracks found.</Text>
+          <Text style={styles.albumText}>Không có bài hát nào.</Text>
         )}
       </ScrollView>
     </View>
