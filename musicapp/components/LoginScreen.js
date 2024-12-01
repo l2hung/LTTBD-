@@ -3,7 +3,6 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert } fro
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Checkbox } from 'react-native-paper'; // Sử dụng Checkbox từ react-native-paper
-import AsyncStorage from '@react-native-async-storage/async-storage'; // Thêm AsyncStorage
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -15,6 +14,7 @@ export default function LoginScreen() {
     if (!email || !password) {
       Alert.alert('Error', 'Please enter both email and password.');
       return;
+      
     }
 
     try {
@@ -24,13 +24,9 @@ export default function LoginScreen() {
       if (response.ok) {
         const user = users.find(user => user.email === email && user.password === password);
         if (user) {
-          // Lưu thông tin người dùng vào AsyncStorage
-          await AsyncStorage.setItem('userId', user.id);  // Lưu userId
-          await AsyncStorage.setItem('userName', user.username || 'User');
-          await AsyncStorage.setItem('userEmail', user.email); // Lưu email nếu cần
-
           Alert.alert('Login Successful', `Welcome back, ${user.username || 'User'}!`);
-          navigation.navigate('Home');  // Điều hướng đến màn hình Home
+          // Truyền username vào params khi điều hướng
+          navigation.navigate('User', { username: user.username }); 
         } else {
           Alert.alert('Login Failed', 'Invalid email or password');
         }
@@ -48,7 +44,7 @@ export default function LoginScreen() {
       <View style={styles.iconContainer}>
         <Image source={require('../assets/image1.png')} style={styles.icon} />
       </View>
-      
+
       <Text style={styles.title}>Welcome Back</Text>
       <Text style={styles.subtitle}>Sign in to continue listening</Text>
 
@@ -152,7 +148,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginRight: 'auto', 
   },
-  forgotPassword: {
+  forgotPassword: { 
     alignSelf: 'flex-end',
   },
   forgotPasswordText: {
